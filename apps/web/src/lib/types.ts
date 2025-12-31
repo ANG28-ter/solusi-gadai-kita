@@ -87,6 +87,7 @@ export interface Customer {
     fullName: string;
     phone: string | null;
     address: string | null;
+    photoUrl?: string | null;
     isActive: boolean;
     deletedAt: string | null;
     createdAt: string;
@@ -128,6 +129,7 @@ export interface CollateralItem {
     name: string;
     description: string | null;
     estimatedValueRp: number | null;
+    photoUrls?: string[];
     createdAt: string;
     updatedAt?: string;
     loan?: {

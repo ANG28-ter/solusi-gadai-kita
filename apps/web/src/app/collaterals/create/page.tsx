@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/Button';
@@ -8,12 +8,18 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
-import { FiArrowLeft, FiSave, FiPackage } from 'react-icons/fi';
+import { FiArrowLeft, FiSave, FiPackage, FiCamera, FiX, FiTrash2 } from 'react-icons/fi';
 import Link from 'next/link';
+import { PageLoader } from '@/components/ui/Loading';
 
 export default function CreateCollateralPage() {
     const router = useRouter();
     const toast = useToast();
+
+    // Photo upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -23,6 +29,63 @@ export default function CreateCollateralPage() {
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        // Combine current and new files, limit to 3
+        const currentCount = selectedFiles.length;
+        const newFiles: File[] = [];
+        let validCount = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            if (currentCount + validCount >= 3) {
+                toast.warning('Maksimal 3 foto');
+                break;
+            }
+
+            const file = files[i];
+
+            // Validate type
+            if (!file.type.match(/^image\/(jpeg|png)$/)) {
+                toast.error(`File ${file.name} format tidak didukung`, 'Gunakan JPG atau PNG');
+                continue;
+            }
+
+            // Validate size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error(`File ${file.name} terlalu besar`, 'Maksimal 5MB');
+                continue;
+            }
+
+            newFiles.push(file);
+            validCount++;
+        }
+
+        if (newFiles.length > 0) {
+            setSelectedFiles(prev => [...prev, ...newFiles]);
+
+            // Generate previews
+            newFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setPreviewUrls(prev => [...prev, reader.result as string]);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Reset input for next selection
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const removePhoto = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+        setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    };
 
     function validateForm() {
         const newErrors: Record<string, string> = {};
@@ -50,6 +113,7 @@ export default function CreateCollateralPage() {
         try {
             setSubmitting(true);
 
+            // 1. Create Collateral
             const payload = {
                 name: formData.name.trim(),
                 description: formData.description.trim() || undefined,
@@ -60,6 +124,25 @@ export default function CreateCollateralPage() {
 
             const response = await api.post('/collaterals', payload);
             const collateralId = response.data?.id || response.data;
+
+            // 2. Upload Photos (if any)
+            if (selectedFiles.length > 0) {
+                try {
+                    const photoFormData = new FormData();
+                    selectedFiles.forEach(file => {
+                        photoFormData.append('photos', file);
+                    });
+
+                    await api.post(`/collaterals/${collateralId}/photos`, photoFormData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    });
+                } catch (uploadError: any) {
+                    console.error('Photo upload failed:', uploadError);
+                    toast.warning('Barang dibuat, tetapi foto gagal diupload: ' + (uploadError.response?.data?.message || uploadError.message));
+                }
+            }
 
             toast.success('Barang jaminan berhasil ditambahkan');
             router.push(`/collaterals/${collateralId}`);
@@ -114,6 +197,72 @@ export default function CreateCollateralPage() {
                     </CardHeader>
                     <CardBody>
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Photo Upload Section */}
+                            <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 bg-gray-50 dark:bg-gray-800/50">
+                                <div className="flex justify-between items-center mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Foto Barang (Opsional, Max 3)
+                                    </label>
+                                    <span className="text-xs text-gray-500">
+                                        {selectedFiles.length} / 3 Foto
+                                    </span>
+                                </div>
+
+                                {previewUrls.length > 0 ? (
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        {previewUrls.map((url, index) => (
+                                            <div key={index} className="relative aspect-square group">
+                                                <img
+                                                    src={url}
+                                                    className="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                                                    alt={`Preview ${index}`}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removePhoto(index)}
+                                                    className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <FiX size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {/* Add button slot if < 3 */}
+                                        {previewUrls.length < 3 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                            >
+                                                <FiCamera size={24} className="text-gray-400" />
+                                                <span className="text-xs text-gray-500 mt-1">Tambah</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="flex flex-col items-center justify-center py-8 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+                                    >
+                                        <FiCamera size={32} className="text-gray-400 mb-2" />
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            Klik untuk upload foto
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Maksimal 5MB per file (JPG/PNG)
+                                        </p>
+                                    </div>
+                                )}
+
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/jpeg,image/png"
+                                    multiple
+                                    onChange={handleFileSelect}
+                                />
+                            </div>
+
                             {/* Name */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

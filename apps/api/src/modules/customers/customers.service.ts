@@ -3,14 +3,19 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FileUploadService } from '../../common/file-upload/file-upload.service';
 import { CreateCustomerDto } from '../customers/dto/create-customers.dto';
 import { FindCustomersQuery } from './dto/find-customers.query';
 
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fileUploadService: FileUploadService,
+  ) { }
 
   private buildCustomerCode(year: number, seq: number): string {
     return `CST-${year}-${String(seq).padStart(5, '0')}`;
@@ -53,6 +58,90 @@ export class CustomersService {
       }
       throw err;
     }
+  }
+
+  async uploadPhoto(
+    customerId: string,
+    file: Express.Multer.File,
+    branchId: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, branchId: true, photoUrl: true },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    // Branch validation
+    if (customer.branchId !== branchId) {
+      throw new ForbiddenException('Customer not found in your branch');
+    }
+
+    // Delete old photo if exists
+    if (customer.photoUrl) {
+      const oldFilename = this.fileUploadService.extractFilename(customer.photoUrl);
+      if (oldFilename) {
+        await this.fileUploadService.deleteFile(oldFilename);
+      }
+    }
+
+    // Save new photo URL
+    const photoUrl = this.fileUploadService.getFileUrl(file.filename);
+
+    return this.prisma.customer.update({
+      where: { id: customerId },
+      data: { photoUrl },
+      select: {
+        id: true,
+        code: true,
+        fullName: true,
+        photoUrl: true,
+      },
+    });
+  }
+
+  async deletePhoto(customerId: string, branchId: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, branchId: true, photoUrl: true },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    // Branch validation
+    if (customer.branchId !== branchId) {
+      throw new ForbiddenException('Customer not found in your branch');
+    }
+
+    if (!customer.photoUrl) {
+      throw new BadRequestException('Customer has no photo');
+    }
+
+    // Delete file from disk
+    const filename = this.fileUploadService.extractFilename(customer.photoUrl);
+    if (filename) {
+      await this.fileUploadService.deleteFile(filename);
+    }
+
+    // Remove photo URL from database
+    return this.prisma.customer.update({
+      where: { id: customerId },
+      data: { photoUrl: null },
+      select: {
+        id: true,
+        code: true,
+        fullName: true,
+        photoUrl: true,
+      },
+    });
   }
 
   async softDelete(customerId: string) {
@@ -105,6 +194,7 @@ export class CustomersService {
         fullName: true,
         phone: true,
         address: true,
+        photoUrl: true,
         isActive: true,
         createdAt: true,
 
@@ -157,6 +247,7 @@ export class CustomersService {
         fullName: true,
         phone: true,
         address: true,
+        photoUrl: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

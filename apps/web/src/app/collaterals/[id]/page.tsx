@@ -15,6 +15,7 @@ import { getCollateralStatus, getCollateralStatusVariant } from '@/lib/collatera
 import { FiArrowLeft, FiEdit, FiTrash2, FiPackage, FiDollarSign } from 'react-icons/fi';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import Link from 'next/link';
+import { CollateralPhotos } from '@/components/collaterals/CollateralPhotos';
 
 export default function CollateralDetailPage() {
     const params = useParams();
@@ -218,6 +219,21 @@ export default function CollateralDetailPage() {
                                 </dd>
                             </div>
                         </dl>
+                    </CardBody>
+                </Card>
+
+                {/* Collateral Photos */}
+                <Card>
+                    <CardHeader>
+                        <h2 className="text-xl font-semibold">Foto Barang Jaminan</h2>
+                    </CardHeader>
+                    <CardBody>
+                        <CollateralPhotos
+                            collateralId={collateral.id}
+                            photoUrls={collateral.photoUrls || []}
+                            onUpdate={loadCollateralData}
+                            editable={true}
+                        />
                     </CardBody>
                 </Card>
 

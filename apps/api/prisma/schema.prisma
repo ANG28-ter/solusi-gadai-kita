@@ -137,6 +137,7 @@ model Customer {
   fullName  String
   phone     String?
   address   String?
+  photoUrl  String?   // Photo URL (optional)
   isActive  Boolean   @default(true)
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -214,6 +215,7 @@ model CollateralItem {
   name             String
   description      String?
   estimatedValueRp Int?
+  photoUrls        String[] @default([]) // Photo URLs array (max 3)
   createdAt        DateTime @default(now())
   loanId           String?
   branchId         String   // Branch where collateral was created

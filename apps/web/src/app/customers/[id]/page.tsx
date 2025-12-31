@@ -17,6 +17,8 @@ import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { LoanStatusBadge } from '@/components/ui/Badge';
 import Link from 'next/link';
 
+import { CustomerPhoto } from '@/components/customers/CustomerPhoto';
+
 export default function CustomerDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -103,12 +105,19 @@ export default function CustomerDetailPage() {
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
                         <Link href="/customers">
                             <Button variant="ghost" leftIcon={<FiArrowLeft />}>
                                 Kembali
                             </Button>
                         </Link>
+
+                        <CustomerPhoto
+                            customerId={customer.id}
+                            photoUrl={customer.photoUrl}
+                            onUpdate={loadCustomerData}
+                        />
+
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                                 {customer.fullName}
