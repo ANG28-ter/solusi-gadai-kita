@@ -285,6 +285,19 @@ export class LoansService {
       include: {
         customer: true,
         collaterals: true,
+        branch: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

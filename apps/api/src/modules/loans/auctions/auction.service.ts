@@ -119,7 +119,8 @@ export class AuctionService {
       const principalPaid = paymentsAgg._sum.principalRecordedRp ?? 0;
 
       // Snapshot: hitung sisa berdasarkan loan FINAL atau berjalan
-      const interestAmountSnapshotRp = loan.principalRp; // frozen logic bisa kamu ganti
+      // Bunga 10% dari pokok pinjaman
+      const interestAmountSnapshotRp = Math.round(loan.principalRp * 0.1);
       const totalDueSnapshotRp = loan.principalRp + interestAmountSnapshotRp;
 
       const remainingSnapshotRp = Math.max(

@@ -178,4 +178,185 @@ export class UsersService {
       throw error;
     }
   }
+
+  /**
+   * Force delete user by reassigning all their data to a replacement user
+   * @param userId - User to delete
+   * @param replacementUserId - User who will take over the deleted user's data
+   */
+  async forceDeleteUser(userId: string, replacementUserId: string) {
+    // 1️⃣ Validate both users exist
+    const [userToDelete, replacementUser] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId } }),
+      this.prisma.user.findUnique({ where: { id: replacementUserId } }),
+    ]);
+
+    if (!userToDelete) {
+      throw new NotFoundException('User yang akan dihapus tidak ditemukan');
+    }
+
+    if (!replacementUser) {
+      throw new NotFoundException('User pengganti tidak ditemukan');
+    }
+
+    if (userId === replacementUserId) {
+      throw new BadRequestException('User pengganti tidak boleh sama dengan user yang dihapus');
+    }
+
+    // 2️⃣ Check if user has any related data
+    const [
+      loansCreatedCount,
+      paymentsCount,
+      cashLedgersCount,
+      decisionsCount,
+      auctionsCreatedCount,
+      auctionsClosedCount,
+      contractsCreatedCount,
+      contractsFinalizedCount,
+      contractsVoidedCount,
+      submittedReportsCount,
+      reviewedReportsCount,
+      auctionSettlementsCount,
+    ] = await Promise.all([
+      this.prisma.loan.count({ where: { createdById: userId } }),
+      this.prisma.payment.count({ where: { userId } }),
+      this.prisma.cashLedger.count({ where: { userId } }),
+      this.prisma.loanDecision.count({ where: { userId } }),
+      this.prisma.auctionListing.count({ where: { createdById: userId } }),
+      this.prisma.auctionListing.count({ where: { closedById: userId } }),
+      this.prisma.loanContract.count({ where: { createdById: userId } }),
+      this.prisma.loanContract.count({ where: { finalizedById: userId } }),
+      this.prisma.loanContract.count({ where: { voidedById: userId } }),
+      this.prisma.reportSubmission.count({ where: { submittedBy: userId } }),
+      this.prisma.reportSubmission.count({ where: { reviewedBy: userId } }),
+      this.prisma.auctionSettlement.count({ where: { createdById: userId } }),
+    ]);
+
+    // 3️⃣ Perform reassignment in a transaction
+    return await this.prisma.$transaction(async (tx) => {
+      // Reassign loans created
+      if (loansCreatedCount > 0) {
+        await tx.loan.updateMany({
+          where: { createdById: userId },
+          data: { createdById: replacementUserId },
+        });
+      }
+
+      // Reassign payments
+      if (paymentsCount > 0) {
+        await tx.payment.updateMany({
+          where: { userId },
+          data: { userId: replacementUserId },
+        });
+      }
+
+      // Reassign cash ledgers
+      if (cashLedgersCount > 0) {
+        await tx.cashLedger.updateMany({
+          where: { userId },
+          data: { userId: replacementUserId },
+        });
+      }
+
+      // Reassign loan decisions
+      if (decisionsCount > 0) {
+        await tx.loanDecision.updateMany({
+          where: { userId },
+          data: { userId: replacementUserId },
+        });
+      }
+
+      // Reassign auctions created
+      if (auctionsCreatedCount > 0) {
+        await tx.auctionListing.updateMany({
+          where: { createdById: userId },
+          data: { createdById: replacementUserId },
+        });
+      }
+
+      // Reassign auctions closed (nullable, so we can also set to null)
+      if (auctionsClosedCount > 0) {
+        await tx.auctionListing.updateMany({
+          where: { closedById: userId },
+          data: { closedById: replacementUserId },
+        });
+      }
+
+      // Reassign contracts created
+      if (contractsCreatedCount > 0) {
+        await tx.loanContract.updateMany({
+          where: { createdById: userId },
+          data: { createdById: replacementUserId },
+        });
+      }
+
+      // Reassign contracts finalized (nullable)
+      if (contractsFinalizedCount > 0) {
+        await tx.loanContract.updateMany({
+          where: { finalizedById: userId },
+          data: { finalizedById: replacementUserId },
+        });
+      }
+
+      // Reassign contracts voided (nullable)
+      if (contractsVoidedCount > 0) {
+        await tx.loanContract.updateMany({
+          where: { voidedById: userId },
+          data: { voidedById: replacementUserId },
+        });
+      }
+
+      // Reassign submitted reports
+      if (submittedReportsCount > 0) {
+        await tx.reportSubmission.updateMany({
+          where: { submittedBy: userId },
+          data: { submittedBy: replacementUserId },
+        });
+      }
+
+      // Reassign reviewed reports (nullable)
+      if (reviewedReportsCount > 0) {
+        await tx.reportSubmission.updateMany({
+          where: { reviewedBy: userId },
+          data: { reviewedBy: replacementUserId },
+        });
+      }
+
+      // Reassign auction settlements
+      if (auctionSettlementsCount > 0) {
+        await tx.auctionSettlement.updateMany({
+          where: { createdById: userId },
+          data: { createdById: replacementUserId },
+        });
+      }
+
+      // Delete notifications (cascade delete)
+      await tx.notification.deleteMany({
+        where: { userId },
+      });
+
+      // Finally, delete the user
+      const deletedUser = await tx.user.delete({
+        where: { id: userId },
+      });
+
+      return {
+        deletedUser,
+        reassignedData: {
+          loansCreated: loansCreatedCount,
+          payments: paymentsCount,
+          cashLedgers: cashLedgersCount,
+          decisions: decisionsCount,
+          auctionsCreated: auctionsCreatedCount,
+          auctionsClosed: auctionsClosedCount,
+          contractsCreated: contractsCreatedCount,
+          contractsFinalized: contractsFinalizedCount,
+          contractsVoided: contractsVoidedCount,
+          submittedReports: submittedReportsCount,
+          reviewedReports: reviewedReportsCount,
+          auctionSettlements: auctionSettlementsCount,
+        },
+      };
+    });
+  }
 }

@@ -118,10 +118,17 @@ export class TransactionReportReadService {
         settledAt: true,
         netAmountRp: true,
         auctionId: true,
+        branchId: true,
         auction: {
           select: {
             loanId: true,
             loan: { select: { code: true } },
+          },
+        },
+        branch: {
+          select: {
+            code: true,
+            name: true,
           },
         },
         cashLedger: { select: { id: true } },

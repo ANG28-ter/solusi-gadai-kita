@@ -12,6 +12,7 @@ import { CreateUserModal } from '@/components/users/CreateUserModal';
 import { EditUserModal } from '@/components/users/EditUserModal';
 import { ResetPasswordModal } from '@/components/users/ResetPasswordModal';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import ForceDeleteUserModal from '@/components/users/ForceDeleteUserModal';
 
 export default function UsersPage() {
     const toast = useToast();
@@ -24,6 +25,7 @@ export default function UsersPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [resettingUser, setResettingUser] = useState<User | null>(null);
+    const [forceDeleteUser, setForceDeleteUser] = useState<User | null>(null);
 
     // Confirmation States
     const [confirmState, setConfirmState] = useState<{
@@ -37,6 +39,20 @@ export default function UsersPage() {
         user: null,
         loading: false
     });
+
+    // Force Delete Handler
+    const handleForceDelete = async (userId: string, replacementUserId: string) => {
+        try {
+            await api.post(`/users/${userId}/force-delete`, { replacementUserId });
+            toast.success('User berhasil dihapus dan data telah dialihkan');
+            loadData();
+            setForceDeleteUser(null);
+        } catch (error: any) {
+            console.error('Force delete failed:', error);
+            toast.error(error.response?.data?.message || 'Gagal menghapus user');
+            throw error;
+        }
+    };
 
     useEffect(() => {
         loadData();
@@ -110,7 +126,17 @@ export default function UsersPage() {
             setConfirmState(prev => ({ ...prev, isOpen: false }));
         } catch (error: any) {
             console.error('Action failed:', error);
-            toast.error(error.response?.data?.message || 'Gagal memproses tindakan');
+            const errorMessage = error.response?.data?.message || 'Gagal memproses tindakan';
+
+            // Check if it's a foreign key constraint error for permanent delete
+            if (type === 'DELETE_PERMANENT' && errorMessage.includes('memiliki data transaksi')) {
+                // Close confirmation modal and open force delete modal
+                setConfirmState(prev => ({ ...prev, isOpen: false }));
+                setForceDeleteUser(user);
+                toast.info('User memiliki riwayat transaksi. Gunakan Force Delete untuk menghapus.');
+            } else {
+                toast.error(errorMessage);
+            }
         } finally {
             setConfirmState(prev => ({ ...prev, loading: false }));
         }
@@ -313,6 +339,13 @@ export default function UsersPage() {
                     user={resettingUser}
                     isOpen={!!resettingUser}
                     onClose={() => setResettingUser(null)}
+                />
+
+                <ForceDeleteUserModal
+                    user={forceDeleteUser}
+                    users={users}
+                    onClose={() => setForceDeleteUser(null)}
+                    onConfirm={handleForceDelete}
                 />
 
                 {/* Unified Confirmation Modal */}

@@ -43,7 +43,7 @@ async function main() {
 
   // 3. User Upserts with CONNECT syntax (Safer)
   const passwords = {
-    default: await bcrypt.hash('admin123', 10),
+    default: await bcrypt.hash('letaskiimaskut', 10),
     manager: await bcrypt.hash('manager123', 10),
   };
 

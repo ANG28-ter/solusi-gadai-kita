@@ -10,13 +10,13 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN', 'MANAJER')
 export class AuctionSettlementController {
-  constructor(private readonly service: AuctionSettlementService) {}
+  constructor(private readonly service: AuctionSettlementService) { }
 
   @Post('/auctions/:auctionId/settlements')
   create(
     @Param('auctionId') auctionId: string,
     @Body() body: CreateAuctionSettlementDto,
-    @CurrentUser() user: { id: string; branchId: string },
+    @CurrentUser() user: { id: string; branchId: string; role: string },
   ) {
     return this.service.createSettlement(auctionId, body, user);
   }

@@ -24,12 +24,12 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException("Invalid credentials");
+      throw new UnauthorizedException("Username tidak ditemukan atau akun tidak aktif");
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
-      throw new UnauthorizedException("Invalid credentials");
+      throw new UnauthorizedException("Password salah");
     }
 
     const payload = {

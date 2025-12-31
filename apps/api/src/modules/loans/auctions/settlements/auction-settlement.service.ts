@@ -21,7 +21,7 @@ export class AuctionSettlementService {
   async createSettlement(
     auctionId: string,
     dto: CreateAuctionSettlementDto,
-    user: { id: string; branchId: string },
+    user: { id: string; branchId: string; role: string },
   ) {
     const feesRp = dto.feesRp ?? 0;
     const netAmountRp = dto.grossAmountRp - feesRp;
@@ -60,8 +60,8 @@ export class AuctionSettlementService {
 
       if (!auction) throw new NotFoundException('Auction tidak ditemukan');
 
-      // Branch isolation
-      if (auction.branchId !== user.branchId) {
+      // Branch isolation - skip for MANAJER role
+      if (user.role !== 'MANAJER' && auction.branchId !== user.branchId) {
         throw new ForbiddenException('Auction bukan milik cabang ini');
       }
 

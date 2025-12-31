@@ -65,8 +65,8 @@ export class UsersController {
       );
     }
 
-    // Opsional tapi DIREKOMENDASIKAN
-    if (req.user.id === userId) {
+    // MANAJER boleh reset password sendiri, role lain tidak boleh
+    if (req.user.id === userId && req.user.role !== 'MANAJER') {
       throw new ForbiddenException('Gunakan fitur ganti password sendiri');
     }
 
@@ -80,5 +80,25 @@ export class UsersController {
   @Roles('ADMIN', 'MANAJER')
   async delete(@Param('id') id: string) {
     return this.usersService.deleteUser(id);
+  }
+
+  @Post(':id/force-delete')
+  @Roles('MANAJER') // Only managers can force delete
+  async forceDelete(
+    @Param('id') id: string,
+    @Body() dto: { replacementUserId: string },
+    @Req() req,
+  ) {
+    // Prevent self-deletion
+    if (req.user.id === id) {
+      throw new ForbiddenException('Tidak dapat menghapus akun sendiri');
+    }
+
+    const result = await this.usersService.forceDeleteUser(id, dto.replacementUserId);
+
+    return {
+      message: 'User berhasil dihapus dan data telah dialihkan',
+      ...result,
+    };
   }
 }
