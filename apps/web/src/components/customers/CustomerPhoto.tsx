@@ -135,7 +135,7 @@ export const CustomerPhoto: React.FC<CustomerPhotoProps> = ({
 
             <div className="relative group">
                 {/* Image Container */}
-                <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-gray-100 dark:border-gray-700 shadow-md bg-gray-50 flex items-center justify-center relative bg-white dark:bg-gray-800">
+                <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-gray-100 dark:border-gray-700 shadow-md flex items-center justify-center relative bg-white dark:bg-gray-800">
                     {isUploading || isDeleting ? (
                         <PageLoader message="Processing..." />
                     ) : previewUrl ? (
