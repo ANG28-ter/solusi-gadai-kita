@@ -1,0 +1,463 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+////////////////////
+/// ENUMS
+////////////////////
+
+enum RoleName {
+  ADMIN
+  KASIR
+  MANAJER
+}
+
+enum LoanStatus {
+  ACTIVE
+  OVERDUE
+  LUNAS
+  CLOSED
+}
+
+enum CashType {
+  IN
+  OUT
+}
+
+enum CashSource {
+  PAYMENT
+  MANUAL
+  AUCTION
+}
+
+enum DecisionValue {
+  AUCTION
+  HOLD
+}
+
+enum CashStatus {
+  POSTED
+  REVERSED
+}
+
+enum CashCategory {
+  OPERATIONAL
+  CAPITAL
+  OTHER
+}
+
+enum AuctionStatus {
+  LISTED
+  SOLD
+  CANCELLED
+}
+
+enum ContractStatus {
+  DRAFT
+  FINAL
+  VOID
+}
+
+////////////////////
+/// MODELS
+////////////////////
+
+model Role {
+  id        String   @id @default(uuid())
+  name      RoleName @unique
+  createdAt DateTime @default(now())
+
+  users User[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String   @unique
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users             User[]
+  customers         Customer[]
+  loans             Loan[]
+  cashLedgers       CashLedger[]
+  Payment           Payment[]
+  auctionListings   AuctionListing[]
+  reportSubmissions ReportSubmission[]
+  LoanContract      LoanContract[]
+  AuctionSettlement AuctionSettlement[]
+  collateralItems   CollateralItem[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  isActive     Boolean  @default(true)
+  lastActiveAt DateTime?
+  createdAt    DateTime @default(now())
+
+  roleId   String
+  branchId String
+
+  role               Role           @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  branch             Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdContracts   LoanContract[] @relation("ContractCreatedBy")
+  finalizedContracts LoanContract[] @relation("ContractFinalizedBy")
+  voidedContracts    LoanContract[] @relation("ContractVoidedBy")
+
+  loansCreated         Loan[]               @relation("LoanCreatedBy")
+  payments             Payment[]
+  cashLedgers          CashLedger[]
+  decisions            LoanDecision[]
+  auctionCreated       AuctionListing[]     @relation("AuctionCreatedBy")
+  auctionClosed        AuctionListing[]     @relation("AuctionClosedBy")
+  AuctionSettlement    AuctionSettlement[]
+  submittedReports     ReportSubmission[]   @relation("SubmittedReports")
+  reviewedReports      ReportSubmission[]   @relation("ReviewedReports")
+  notifications        Notification[]
+}
+
+model Customer {
+  id String @id @default(uuid())
+
+  // BARU: kode nasabah
+  code String @unique
+
+  nik       String    @unique
+  fullName  String
+  phone     String?
+  address   String?
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Branch ownership
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  loans Loan[]
+
+  @@index([branchId])
+}
+
+// sequence generator untuk customer.code
+model CustomerSequence {
+  year       Int
+  lastNumber Int
+
+  @@id([year])
+}
+
+model Loan {
+  id     String     @id @default(uuid())
+  code   String     @unique
+  status LoanStatus @default(ACTIVE)
+
+  customerId  String
+  branchId    String
+  createdById String
+
+  tenorMonths Int?
+  startDate   DateTime
+  dueDate     DateTime
+  principalRp Int
+  adminFeeRp  Int      @default(0)
+
+  finalizedAt           DateTime?
+  daysUsedFinal         Int?
+  interestRateBpsFinal  Int?
+  interestAmountRpFinal Int?
+  totalDueRpFinal       Int?
+
+  createdAt DateTime @default(now())
+
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy User     @relation("LoanCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  payments    Payment[]
+  collaterals CollateralItem[]
+  decisions   LoanDecision[]
+
+  auction      AuctionListing?
+  LoanContract LoanContract[]
+}
+
+model LoanDecision {
+  id     String @id @default(uuid())
+  loanId String
+  userId String
+
+  decision  DecisionValue
+  note      String?
+  createdAt DateTime      @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([loanId, createdAt])
+}
+
+model CollateralItem {
+  id               String   @id @default(uuid())
+  name             String
+  description      String?
+  estimatedValueRp Int?
+  createdAt        DateTime @default(now())
+  loanId           String?
+  branchId         String   // Branch where collateral was created
+
+  loan   Loan?  @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([loanId])
+  @@index([branchId])
+}
+
+model Payment {
+  id       String @id @default(uuid())
+  loanId   String
+  userId   String
+  branchId String
+
+  amountRp  Int
+  paidAt    DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  reversedAt DateTime?
+  reversedBy String?
+
+  daysUsedSnapshot         Int?
+  interestRateSnapshotBps  Int?
+  interestAmountSnapshotRp Int?
+  totalDueSnapshotRp       Int?
+  interestRecordedRp       Int?
+  principalRecordedRp      Int?
+
+  cashLedger CashLedger?
+
+  loan   Loan   @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([loanId])
+}
+
+model CashLedger {
+  id       String @id @default(uuid())
+  branchId String
+  userId   String
+
+  type      CashType
+  source    CashSource
+  amountRp  Int
+  title     String
+  txnDate   DateTime
+  note      String?
+  createdAt DateTime   @default(now())
+
+  // BARU: audit & reversal
+  status              CashStatus   @default(POSTED)
+  category            CashCategory @default(OPERATIONAL)
+  paymentId           String?      @unique
+  payment             Payment?     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reversalOfId        String?
+  reversedById        String?
+  reversedAt          DateTime?
+  deletedAt           DateTime?
+  auctionSettlementId String?      @unique
+
+  auctionSettlement AuctionSettlement? @relation(fields: [auctionSettlementId], references: [id], onDelete: Restrict)
+  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // self relation (lengkap & valid)
+  reversalOf CashLedger? @relation("CashReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy CashLedger? @relation("CashReversedBy", fields: [reversedById], references: [id], onDelete: Restrict)
+
+  reversalChildren CashLedger[] @relation("CashReversal")
+  reversedChildren CashLedger[] @relation("CashReversedBy")
+
+  @@index([branchId, txnDate])
+  @@index([status])
+}
+
+model AuctionListing {
+  id          String @id @default(uuid())
+  loanId      String @unique
+  branchId    String
+  createdById String
+
+  status   AuctionStatus @default(LISTED)
+  listedAt DateTime      @default(now())
+
+  // snapshot audit
+  dueDateSnapshot          DateTime
+  daysUsedSnapshot         Int
+  interestAmountSnapshotRp Int
+  totalDueSnapshotRp       Int
+  remainingSnapshotRp      Int
+
+  closedAt   DateTime?
+  closedById String?
+  note       String?
+  deletedAt  DateTime?
+
+  loan              Loan                @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  branch            Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy         User                @relation("AuctionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  closedBy          User?               @relation("AuctionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+  AuctionSettlement AuctionSettlement[]
+
+  @@index([branchId, status, listedAt])
+}
+
+model LoanContract {
+  id          String @id @default(uuid())
+  loanId      String
+  branchId    String
+  createdById String
+
+  status          ContractStatus @default(DRAFT)
+  contractNo      String?        @unique
+  templateVersion Int            @default(1)
+
+  snapshotJson       Json
+  snapshotHashSha256 String
+
+  finalizedAt   DateTime?
+  finalizedById String?
+
+  voidedAt   DateTime?
+  voidedById String?
+  voidReason String?
+
+  createdAt DateTime @default(now())
+
+  // relasi
+  loan   Loan   @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  createdBy   User  @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  finalizedBy User? @relation("ContractFinalizedBy", fields: [finalizedById], references: [id], onDelete: Restrict)
+  voidedBy    User? @relation("ContractVoidedBy", fields: [voidedById], references: [id], onDelete: Restrict)
+
+  @@index([loanId, createdAt])
+  @@index([status])
+}
+
+model ContractSequence {
+  branchId   String
+  year       Int
+  lastNumber Int
+
+  @@id([branchId, year])
+}
+
+model AuctionSettlement {
+  id          String @id @default(uuid())
+  auctionId   String
+  branchId    String
+  createdById String
+
+  grossAmountRp Int // harga jual lelang
+  feesRp        Int @default(0)
+  netAmountRp   Int // gross - fees
+
+  settledAt DateTime // tanggal uang diterima
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  // relasi
+  auction   AuctionListing @relation(fields: [auctionId], references: [id], onDelete: Restrict)
+  branch    Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  cashLedger CashLedger?
+
+  @@index([auctionId, settledAt])
+}
+
+model ReportSubmission {
+  id          String       @id @default(uuid())
+  branchId    String
+  submittedBy String
+
+  // Report period
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Report data snapshot (JSON)
+  reportData Json
+
+  // Physical cash verification
+  physicalCashRp Int
+
+  // Status workflow
+  status ReportStatus @default(PENDING)
+
+  // Submission details
+  submittedAt DateTime @default(now())
+  note        String?
+
+  // Manager review
+  reviewedBy String?
+  reviewedAt DateTime?
+  reviewNote String?
+
+  // Relations
+  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  submitter User   @relation("SubmittedReports", fields: [submittedBy], references: [id], onDelete: Restrict)
+  reviewer  User?  @relation("ReviewedReports", fields: [reviewedBy], references: [id], onDelete: Restrict)
+
+  @@index([branchId, status, submittedAt])
+  @@index([submittedBy])
+}
+
+enum ReportStatus {
+  PENDING  // Menunggu review manager
+  APPROVED // Disetujui
+  REJECTED // Ditolak
+  REVISED  // Perlu revisi
+}
+
+model CompanyProfile {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  phone     String?
+  email     String?
+  logoUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String?  // INFO, WARNING, SUCCESS, ERROR
+  link      String?  // Optional link to navigate to
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
