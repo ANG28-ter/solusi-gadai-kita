@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
   Req,
@@ -39,6 +40,13 @@ export class CollateralController {
   @Get('/:id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  @Patch('/:id')
+  update(@Param('id') id: string, @Body() body: CreateCollateralDto, @Req() req, @Headers() headers) {
+    const selectedBranch = extractSelectedBranch(headers);
+    const filter = getBranchFilter(req.user, selectedBranch);
+    return this.service.update(id, body, filter.branchId);
   }
 
   /**

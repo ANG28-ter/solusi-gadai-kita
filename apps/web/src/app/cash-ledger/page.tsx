@@ -11,7 +11,7 @@ import { useToast } from '@/components/ui/Toast';
 import { PageLoader } from '@/components/ui/Loading';
 import { api } from '@/lib/api';
 import { CashLedgerEntry, CashLedgerListResponse, CashLedgerSummary, CashType } from '@/lib/types/cash-ledger';
-import { formatDate, formatCurrency, parseNumber } from '@/lib/utils';
+import { formatDate, formatDateTime, formatCurrency, parseNumber } from '@/lib/utils';
 import { FiSearch, FiTrendingUp, FiTrendingDown, FiDollarSign, FiPlus } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
@@ -42,7 +42,7 @@ export default function CashLedgerPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    const itemsPerPage = 20;
+    const itemsPerPage = 10;
 
     // Manual Entry Form State
     const [showModal, setShowModal] = useState(false);
@@ -248,7 +248,7 @@ export default function CashLedgerPage() {
         <AppLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             Kas & Ledger
@@ -262,6 +262,8 @@ export default function CashLedgerPage() {
                         onClick={() => setShowModal(true)}
                         variant="primary"
                         leftIcon={<FiPlus />}
+                        fullWidth
+                        className="sm:w-auto"
                     >
                         Tambah Transaksi
                     </Button>
@@ -388,6 +390,13 @@ export default function CashLedgerPage() {
                                 ),
                             },
                             {
+                                key: 'createdAt',
+                                header: 'Waktu Aksi',
+                                render: (entry) => (
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">{formatDateTime(entry.createdAt)}</span>
+                                ),
+                            },
+                            {
                                 key: 'type',
                                 header: 'Tipe',
                                 render: (entry) => (
@@ -432,15 +441,6 @@ export default function CashLedgerPage() {
                                     </span>
                                 ),
                             },
-                            {
-                                key: 'status',
-                                header: 'Status',
-                                render: (entry) => (
-                                    entry.status === 'REVERSED' ? (
-                                        <Badge variant="default" size="sm">DIBATALKAN</Badge>
-                                    ) : null
-                                ),
-                            },
                         ]}
                         emptyMessage="Tidak ada data transaksi kas"
                     />
@@ -478,9 +478,6 @@ export default function CashLedgerPage() {
                                                 <Badge variant={getTypeBadgeVariant(entry.type)} size="sm">
                                                     {entry.type === 'IN' ? 'MASUK' : 'KELUAR'}
                                                 </Badge>
-                                                {entry.status === 'REVERSED' && (
-                                                    <Badge variant="default" size="sm">DIBATALKAN</Badge>
-                                                )}
                                             </div>
                                             <p className="font-medium mt-2 text-gray-900 dark:text-gray-100">{formatLedgerTitle(entry.title, entry)}</p>
                                             <p className="text-xs text-gray-500 mt-1">{sourceLabels[entry.source] || entry.source}</p>
@@ -491,6 +488,10 @@ export default function CashLedgerPage() {
                                         <div className="flex items-center justify-between">
                                             <span className="text-gray-500 dark:text-gray-400">Tanggal:</span>
                                             <span>{formatDate(entry.txnDate)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-500 dark:text-gray-400">Waktu Aksi:</span>
+                                            <span className="text-xs">{formatDateTime(entry.createdAt)}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-gray-500 dark:text-gray-400">Keterangan:</span>

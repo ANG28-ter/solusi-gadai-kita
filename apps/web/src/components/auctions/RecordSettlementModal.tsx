@@ -59,8 +59,8 @@ export function RecordSettlementModal({ auctionId, isOpen, onClose, onSuccess }:
             onClose();
             resetForm();
         } catch (error: any) {
-            console.error('Error recording settlement:', error);
-            toast.error('Gagal mencatat settlement', error.response?.data?.message || error.message);
+            console.error('Error recording:', error);
+            toast.error('Gagal mencatat', error.response?.data?.message || error.message);
         } finally {
             setLoading(false);
         }
@@ -188,7 +188,7 @@ export function RecordSettlementModal({ auctionId, isOpen, onClose, onSuccess }:
                         type="submit"
                         disabled={loading || grossAmount <= 0 || netAmount <= 0}
                     >
-                        {loading ? 'Menyimpan...' : 'Catat Settlement'}
+                        {loading ? 'Menyimpan...' : 'Catat'}
                     </Button>
                 </div>
             </form>

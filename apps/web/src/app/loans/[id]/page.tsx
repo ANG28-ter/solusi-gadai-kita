@@ -296,7 +296,7 @@ export default function LoanDetailPage() {
                 )}
                 <CreateAuctionModal
                     loanCode={loan.code}
-                    remainingAmount={remaining?.totalDueRp || 0}
+                    remainingAmount={remaining?.remaining?.totalRp || 0}
                     isOpen={showCreateAuctionModal}
                     onClose={() => setShowCreateAuctionModal(false)}
                     onConfirm={handleCreateAuction}

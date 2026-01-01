@@ -9,15 +9,17 @@ import { Pagination } from '@/components/ui/Pagination';
 import { PageLoader } from '@/components/ui/Loading';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { FiEye, FiInfo } from 'react-icons/fi';
 
 interface PaymentItem {
     id: string;
     amountRp: number;
     paidAt: string;
+    createdAt: string;
     note?: string;
     loan: {
+        id: string;
         code: string;
         customer: { fullName: string };
     };
@@ -76,10 +78,19 @@ export default function PaymentsPage() {
                                             render: (item) => formatDate(item.paidAt),
                                         },
                                         {
+                                            key: 'createdAt',
+                                            header: 'Waktu Aksi',
+                                            render: (item) => (
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">{formatDateTime(item.createdAt)}</span>
+                                            ),
+                                        },
+                                        {
                                             key: 'loan',
                                             header: 'Kode Gadai',
                                             render: (item) => (
-                                                <span className="font-mono text-primary font-medium">{item.loan.code}</span>
+                                                <Link href={`/loans/${item.loan.id}`} className="font-mono text-primary font-medium hover:underline">
+                                                    {item.loan.code}
+                                                </Link>
                                             ),
                                         },
                                         {
@@ -122,9 +133,9 @@ export default function PaymentsPage() {
                                     <div key={item.id} className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
-                                                <div className="font-mono text-xs font-bold text-primary mb-1">
+                                                <Link href={`/loans/${item.loan.id}`} className="font-mono text-xs font-bold text-primary mb-1 hover:underline block">
                                                     {item.loan.code}
-                                                </div>
+                                                </Link>
                                                 <div className="font-semibold text-gray-900 dark:text-gray-100">
                                                     {item.loan.customer.fullName}
                                                 </div>

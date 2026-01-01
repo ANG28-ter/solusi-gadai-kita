@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { FiBell, FiCheck, FiInfo, FiAlertCircle, FiCheckCircle, FiX } from 'react-icons/fi';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -18,6 +19,7 @@ interface Notification {
 
 export function NotificationDropdown() {
     const { user } = useAuth();
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -86,6 +88,17 @@ export function NotificationDropdown() {
         }
     };
 
+    const handleNotificationClick = (notification: Notification) => {
+        if (!notification.isRead) {
+            markAsRead(notification.id);
+        }
+
+        if (notification.link) {
+            setIsOpen(false);
+            router.push(notification.link);
+        }
+    };
+
     return (
         <div className="relative" ref={dropdownRef}>
             <button
@@ -127,10 +140,11 @@ export function NotificationDropdown() {
                                 {notifications.map(notification => (
                                     <div
                                         key={notification.id}
-                                        onClick={() => !notification.isRead && markAsRead(notification.id)}
+                                        onClick={() => handleNotificationClick(notification)}
                                         className={clsx(
-                                            "px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#334155]/50 transition-colors cursor-pointer flex gap-3 relative group",
-                                            !notification.isRead && "bg-blue-50/30 dark:bg-blue-900/10"
+                                            "px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#334155]/50 transition-colors flex gap-3 relative group",
+                                            !notification.isRead && "bg-blue-50/30 dark:bg-blue-900/10",
+                                            notification.link ? "cursor-pointer" : "cursor-default"
                                         )}
                                     >
                                         <div className="mt-1 flex-shrink-0">

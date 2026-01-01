@@ -128,7 +128,7 @@ export default function CollateralsPage() {
         <AppLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
                             Barang Jaminan
@@ -137,7 +137,7 @@ export default function CollateralsPage() {
                             Kelola data barang jaminan
                         </p>
                     </div>
-                    <Link href="/collaterals/create">
+                    <Link href="/collaterals/create" className="w-full sm:w-auto">
                         <Button size="lg" leftIcon={<FiPlus />} fullWidth className="sm:w-auto">
                             Tambah Barang Jaminan
                         </Button>

@@ -407,6 +407,7 @@ export default function ContractDetailPage() {
                                 <div className="border-t border-gray-300 pt-1 font-bold text-gray-900">Uang Diterima Nasabah:</div>
                                 <div className="border-t border-gray-300 pt-1 text-right font-bold text-lg text-gray-900">
                                     {formatCurrency(data.financial.netDisbursedRp)}
+                                    <p className="text-xs font-thin">(belum termasuk bunga)</p>
                                 </div>
                                 <div className="mt-2">Tenor:</div>
                                 <div className="mt-2 text-right">{data.financial.tenorDays} hari</div>
@@ -444,7 +445,7 @@ export default function ContractDetailPage() {
                                 </div>
                             </div>
                             <div>
-                                <p className="mb-4">Perusahaan,</p>
+                                <p className="mb-4">Petugas,</p>
                                 <div className="mt-16 mb-2">
                                     <p className="border-t border-gray-800 inline-block px-8 pt-1 text-gray-900">({data.meta.cashierName})</p>
                                 </div>

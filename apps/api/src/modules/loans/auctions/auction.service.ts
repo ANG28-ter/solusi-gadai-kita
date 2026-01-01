@@ -7,10 +7,14 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { LoanStatus, AuctionStatus } from '@prisma/client';
 import { CloseAuctionDto } from './dto/close-auction.dto';
+import { LoanCalculationService } from '../services/loans-calculation.service';
 
 @Injectable()
 export class AuctionService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly calculator: LoanCalculationService,
+  ) { }
 
   async listAuctions(status?: AuctionStatus, branchId?: string) {
     const where: any = {};
@@ -107,8 +111,9 @@ export class AuctionService {
       }
 
       // Ambil snapshot finansial TERAKHIR (read-only)
+      // Ambil snapshot finansial TERAKHIR (read-only)
       const paymentsAgg = await tx.payment.aggregate({
-        where: { loanId },
+        where: { loanId, reversedAt: null }, // Fix: exclude reversed
         _sum: {
           interestRecordedRp: true,
           principalRecordedRp: true,
@@ -117,23 +122,41 @@ export class AuctionService {
 
       const interestPaid = paymentsAgg._sum.interestRecordedRp ?? 0;
       const principalPaid = paymentsAgg._sum.principalRecordedRp ?? 0;
+      const totalPaid = interestPaid + principalPaid;
 
-      // Snapshot: hitung sisa berdasarkan loan FINAL atau berjalan
-      // Bunga 10% dari pokok pinjaman
-      const interestAmountSnapshotRp = Math.round(loan.principalRp * 0.1);
-      const totalDueSnapshotRp = loan.principalRp + interestAmountSnapshotRp;
+      // Check logic: isInterestPaidBeforeDay16 same as LoansService
+      const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+      const aggEarly = await tx.payment.aggregate({
+        where: {
+          loanId: loanId,
+          reversedAt: null,
+          paidAt: { lt: day16Start },
+        },
+        _sum: { interestRecordedRp: true },
+      });
+      const interestPaidEarly = aggEarly._sum.interestRecordedRp ?? 0;
+      const targetInterest5Percent = Math.floor(loan.principalRp * 0.05);
+      const isInterestPaidBeforeDay16 = interestPaidEarly >= targetInterest5Percent;
 
+      // Calculate official stats using calculator
+      const summary = this.calculator.calculate({
+        principalRp: loan.principalRp,
+        startDate: loan.startDate,
+        interestPaidSoFar: interestPaid,
+        isInterestPaidBeforeDay16,
+      });
+
+      // Bunga 10% dari pokok pinjaman -> NO, use calculated amount
+      const interestAmountSnapshotRp = summary.interestAmountRp;
+      const totalDueSnapshotRp = summary.totalDueRp;
+
+      // Remaining must be calculated correctly (Total Due - Total Paid)
       const remainingSnapshotRp = Math.max(
-        totalDueSnapshotRp - (interestPaid + principalPaid),
+        summary.totalDueRp - totalPaid,
         0,
       );
 
-      const daysUsedSnapshot = Math.max(
-        Math.ceil(
-          (Date.now() - loan.startDate.getTime()) / (1000 * 60 * 60 * 24),
-        ),
-        1,
-      );
+      const daysUsedSnapshot = summary.daysUsed;
 
       let auction;
 

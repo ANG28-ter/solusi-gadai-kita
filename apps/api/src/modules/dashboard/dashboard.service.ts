@@ -58,6 +58,21 @@ export class DashboardService {
             _count: true,
         });
 
+        // Payments This Month
+        const paymentsThisMonth = await this.prisma.payment.aggregate({
+            where: {
+                ...whereBranch,
+                paidAt: {
+                    gte: monthStart,
+                    lt: nextMonthStart,
+                },
+            },
+            _sum: {
+                amountRp: true,
+            },
+            _count: true,
+        });
+
         // 3. CashLedger Stats (Today & Balance)
         // Cash In Today
         const cashInToday = await this.prisma.cashLedger.aggregate({
@@ -87,6 +102,34 @@ export class DashboardService {
             _sum: { amountRp: true },
         });
 
+        // Cash In This Month
+        const cashInThisMonth = await this.prisma.cashLedger.aggregate({
+            where: {
+                ...whereBranch,
+                type: CashType.IN,
+                status: CashStatus.POSTED,
+                txnDate: {
+                    gte: monthStart,
+                    lt: nextMonthStart,
+                }
+            },
+            _sum: { amountRp: true },
+        });
+
+        // Cash Out This Month
+        const cashOutThisMonth = await this.prisma.cashLedger.aggregate({
+            where: {
+                ...whereBranch,
+                type: CashType.OUT,
+                status: CashStatus.POSTED,
+                txnDate: {
+                    gte: monthStart,
+                    lt: nextMonthStart,
+                }
+            },
+            _sum: { amountRp: true },
+        });
+
         // Balance (Total In - Total Out) - simplified. 
         // In a real accounting system we might query a snapshot + delta, but for now sum all.
         // If performance is an issue, we should fix this later.
@@ -106,13 +149,29 @@ export class DashboardService {
             where: { ...whereBranch, status: AuctionStatus.LISTED },
         });
 
+        // Calculate week range for due loans
+        const weekEnd = new Date(todayStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+
+        // Loans due this week (will become overdue in next 7 days)
+        const loansDueThisWeek = await this.prisma.loan.count({
+            where: {
+                ...whereBranch,
+                status: LoanStatus.ACTIVE,
+                dueDate: {
+                    gte: todayStart,
+                    lt: weekEnd
+                }
+            }
+        });
+
         const auctionsSoldMonth = await this.prisma.auctionListing.count({
             where: {
                 ...whereBranch,
                 status: AuctionStatus.SOLD,
                 closedAt: {
-                    gte: monthStart,
-                    lt: nextMonthStart
+                    gte: monthStart,  // Start of current month
+                    lt: nextMonthStart  // Start of next month
                 }
             }
         });
@@ -159,18 +218,22 @@ export class DashboardService {
                 cash: {
                     inToday: cashInToday._sum.amountRp || 0,
                     outToday: cashOutToday._sum.amountRp || 0,
+                    inThisMonth: cashInThisMonth._sum.amountRp || 0,
+                    outThisMonth: cashOutThisMonth._sum.amountRp || 0,
                     balance: balance,
                     changePercent: 0, // Placeholder
                 },
                 payments: {
                     totalToday: paymentsToday._sum.amountRp || 0,
                     countToday: paymentsToday._count || 0,
+                    totalThisMonth: paymentsThisMonth._sum.amountRp || 0,
+                    countThisMonth: paymentsThisMonth._count || 0,
                     averageAmount: (paymentsToday._count > 0) ? (paymentsToday._sum.amountRp || 0) / paymentsToday._count : 0,
                     interestCollected: paymentsToday._sum.interestRecordedRp || 0,
                 },
                 auctions: {
                     listed: auctionsListed,
-                    dueThisWeek: 0, // TODO: Implement if needed
+                    dueThisWeek: loansDueThisWeek,  // Loans due in next 7 days
                     soldThisMonth: auctionsSoldMonth,
                     totalValue: 0,
                 },

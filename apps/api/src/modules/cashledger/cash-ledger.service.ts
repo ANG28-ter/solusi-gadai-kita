@@ -104,6 +104,7 @@ export class CashLedgerService {
 
     const where: any = {
       branchId: params.branchId,
+      status: { not: 'REVERSED' }, // Exclude reversed entries
     };
 
     if (params.from || params.to) {
@@ -123,7 +124,10 @@ export class CashLedgerService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.cashLedger.findMany({
         where,
-        orderBy: { txnDate: 'desc' },
+        orderBy: [
+          { createdAt: 'desc' },  // Sort by actual action time (when created)
+          { txnDate: 'desc' }     // Secondary sort by transaction date
+        ],
         skip,
         take: limit,
         include: {
@@ -153,6 +157,7 @@ export class CashLedgerService {
   async getSummary(params: { branchId: string; from?: Date; to?: Date }) {
     const where: any = {
       branchId: params.branchId,
+      status: { not: 'REVERSED' }, // Exclude reversed entries from summary
     };
 
     if (params.from || params.to) {

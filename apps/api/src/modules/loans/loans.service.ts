@@ -339,9 +339,31 @@ export class LoansService {
       return { status: loan.status, message: 'Loan sudah tidak aktif' };
     }
 
+    const agg = await this.prisma.payment.aggregate({
+      where: { loanId: id, reversedAt: null },
+      _sum: { interestRecordedRp: true },
+    });
+    const interestPaidSoFar = agg._sum.interestRecordedRp ?? 0;
+
+    // Check if interest was fully paid within the first 15 days
+    const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+    const aggEarly = await this.prisma.payment.aggregate({
+      where: {
+        loanId: id,
+        reversedAt: null,
+        paidAt: { lt: day16Start },
+      },
+      _sum: { interestRecordedRp: true },
+    });
+    const interestPaidEarly = aggEarly._sum.interestRecordedRp ?? 0;
+    const targetInterest5Percent = Math.floor(loan.principalRp * 0.05);
+    const isInterestPaidBeforeDay16 = interestPaidEarly >= targetInterest5Percent;
+
     return this.calculator.calculate({
       principalRp: loan.principalRp,
       startDate: loan.startDate,
+      interestPaidSoFar,
+      isInterestPaidBeforeDay16,
     });
   }
 
@@ -360,11 +382,6 @@ export class LoansService {
       return { status: loan.status, message: 'Loan sudah final' };
     }
 
-    const summary = this.calculator.calculate({
-      principalRp: loan.principalRp,
-      startDate: loan.startDate,
-    });
-
     const agg = await this.prisma.payment.aggregate({
       where: { loanId: id, reversedAt: null },
       _sum: {
@@ -376,6 +393,27 @@ export class LoansService {
     const interestPaid = agg._sum.interestRecordedRp ?? 0;
     const principalPaid = agg._sum.principalRecordedRp ?? 0;
     const totalPaid = interestPaid + principalPaid;
+
+    // Check if interest was fully paid within the first 15 days
+    const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+    const aggEarly = await this.prisma.payment.aggregate({
+      where: {
+        loanId: id,
+        reversedAt: null,
+        paidAt: { lt: day16Start },
+      },
+      _sum: { interestRecordedRp: true },
+    });
+    const interestPaidEarly = aggEarly._sum.interestRecordedRp ?? 0;
+    const targetInterest5Percent = Math.floor(loan.principalRp * 0.05);
+    const isInterestPaidBeforeDay16 = interestPaidEarly >= targetInterest5Percent;
+
+    const summary = this.calculator.calculate({
+      principalRp: loan.principalRp,
+      startDate: loan.startDate,
+      interestPaidSoFar: interestPaid,
+      isInterestPaidBeforeDay16,
+    });
 
     const remainingInterest = Math.max(
       summary.interestAmountRp - interestPaid,

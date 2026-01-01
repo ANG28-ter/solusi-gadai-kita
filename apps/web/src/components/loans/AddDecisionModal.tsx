@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
 import { Loan } from '@/lib/types';
-import { FiAlertCircle } from 'react-icons/fi';
+import { FiAlertTriangle } from 'react-icons/fi';
+import { FaGavel } from 'react-icons/fa';
 
 interface AddDecisionModalProps {
     loan: Loan;
@@ -13,12 +14,9 @@ interface AddDecisionModalProps {
     onSuccess: () => void;
 }
 
-type DecisionType = 'AUCTION' | 'HOLD';
-
 export function AddDecisionModal({ loan, isOpen, onClose, onSuccess }: AddDecisionModalProps) {
     const toast = useToast();
     const [submitting, setSubmitting] = useState(false);
-    const [decisionType, setDecisionType] = useState<DecisionType>('AUCTION');
     const [note, setNote] = useState('');
 
     async function handleSubmit(e: React.FormEvent) {
@@ -31,11 +29,12 @@ export function AddDecisionModal({ loan, isOpen, onClose, onSuccess }: AddDecisi
 
         try {
             setSubmitting(true);
+            // Always send 'AUCTION' as it is now the only option
             await api.post(`/loans/${loan.id}/decisions`, {
-                decision: decisionType,
+                decision: 'AUCTION',
                 note: note.trim(),
             });
-            toast.success('Keputusan berhasil ditambahkan');
+            toast.success('Keputusan Lelang berhasil dibuat');
             onSuccess();
             handleClose();
         } catch (error: any) {
@@ -47,132 +46,72 @@ export function AddDecisionModal({ loan, isOpen, onClose, onSuccess }: AddDecisi
     }
 
     function handleClose() {
-        setDecisionType('AUCTION');
         setNote('');
         onClose();
     }
 
-    const decisionInfo = {
-        AUCTION: {
-            label: '🔨 Lelang (Auction)',
-            description: 'Menandai loan untuk proses lelang. Barang jaminan akan dijual lelang.',
-            impact: [
-                'Loan ditandai untuk proses lelang',
-                'Tidak memblokir pembayaran',
-                'Tercatat di timeline audit',
-            ],
-        },
-        HOLD: {
-            label: '⏸️ Tahan (Hold)',
-            description: 'Menahan loan untuk review lebih lanjut.',
-            impact: [
-                'Loan ditandai untuk review',
-                'Memerlukan keputusan lanjutan',
-                'Tercatat di timeline audit',
-            ],
-        },
-    };
-
-    const selectedInfo = decisionInfo[decisionType];
-
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} title="Tambah Keputusan" size="md">
+        <Modal isOpen={isOpen} onClose={handleClose} title="Keputusan Lelang" size="md">
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Loan Info */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Gadai:</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">
-                        {loan.code} - {loan.customer?.fullName}
+                {/* Warning Banner */}
+                <div className="flex flex-col items-center justify-center p-6 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-800/30 text-center">
+                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mb-4">
+                        <FaGavel className="w-6 h-6 text-orange-600 dark:text-orange-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        Konfirmasi Lelang
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xs">
+                        Anda akan menandai gadai <strong>{loan.code}</strong> untuk proses lelang. Barang jaminan akan masuk daftar siap jual.
                     </p>
                 </div>
 
-                {/* Decision Type */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Jenis Keputusan <span className="text-red-500">*</span>
-                    </label>
-                    <div className="space-y-2">
-                        {(Object.keys(decisionInfo) as DecisionType[]).map((type) => (
-                            <label
-                                key={type}
-                                className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${decisionType === type
-                                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                                    }`}
-                            >
-                                <input
-                                    type="radio"
-                                    name="decisionType"
-                                    value={type}
-                                    checked={decisionType === type}
-                                    onChange={(e) => setDecisionType(e.target.value as DecisionType)}
-                                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                />
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                                        {decisionInfo[type].label}
-                                    </p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        {decisionInfo[type].description}
-                                    </p>
-                                </div>
-                            </label>
-                        ))}
+                {/* Alert Info */}
+                <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-800/30">
+                    <FiAlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-red-800 dark:text-red-200">
+                        <p className="font-medium mb-1">Perhatian:</p>
+                        <ul className="list-disc pl-4 space-y-1 opacity-90">
+                            <li>Status gadai akan tetap OVERDUE sampai barang terjual atau dilunasi.</li>
+                            <li>Nasabah masih bisa melunasi selama barang belum terjual.</li>
+                        </ul>
                     </div>
                 </div>
 
-                {/* Impact Info */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                        <FiAlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                                Dampak Keputusan "{selectedInfo.label}"
-                            </h4>
-                            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                                {selectedInfo.impact.map((item, idx) => (
-                                    <li key={idx}>• {item}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Note */}
+                {/* Note Input */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Catatan / Alasan <span className="text-red-500">*</span>
+                        Alasan Lelang <span className="text-red-500">*</span>
                     </label>
                     <textarea
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
-                        rows={4}
-                        placeholder="Jelaskan alasan keputusan ini..."
+                        rows={3}
+                        placeholder="Contoh: Nasabah tidak bisa dihubungi dan sudah lewat jatuh tempo..."
                         required
-                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 px-4 py-2 text-gray-900 dark:text-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:border-[#1e3a5f] focus:ring-[#1e3a5f]"
+                        className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 px-4 py-3 text-gray-900 dark:text-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:border-orange-500 focus:ring-orange-500"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Catatan ini akan tercatat di timeline audit
-                    </p>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3">
-                    <Button
-                        type="submit"
-                        disabled={submitting || !note.trim()}
-                        fullWidth
-                    >
-                        {submitting ? 'Menyimpan...' : 'Tambah Keputusan'}
-                    </Button>
+                <div className="flex items-center gap-3 pt-2">
                     <Button
                         type="button"
                         variant="secondary"
                         onClick={handleClose}
                         disabled={submitting}
                         fullWidth
+                        className="h-12"
                     >
                         Batal
+                    </Button>
+                    <Button
+                        type="submit"
+                        disabled={submitting || !note.trim()}
+                        fullWidth
+                        className="h-12 bg-orange-600 hover:bg-orange-700 text-white border-transparent focus:ring-orange-500"
+                    >
+                        {submitting ? 'Memproses...' : 'Ya, Putuskan Lelang'}
                     </Button>
                 </div>
             </form>

@@ -175,7 +175,10 @@ export class PaymentsService {
     const limit = params.limit && params.limit > 0 ? Number(params.limit) : 20;
     const skip = (page - 1) * limit;
 
-    const where: any = { branchId: params.branchId };
+    const where: any = {
+      branchId: params.branchId,
+      reversedAt: null  // Exclude reversed/cancelled payments
+    };
     if (params.loanId) {
       where.loanId = params.loanId;
     }
@@ -184,10 +187,13 @@ export class PaymentsService {
       this.prisma.payment.findMany({
         where,
         include: {
-          loan: { select: { code: true, customer: { select: { fullName: true } } } },
+          loan: { select: { id: true, code: true, customer: { select: { fullName: true } } } },
           user: { select: { fullName: true } },
         },
-        orderBy: { paidAt: 'desc' },
+        orderBy: [
+          { createdAt: 'desc' },  // Sort by actual action time (when created)
+          { paidAt: 'desc' }      // Secondary sort by payment date
+        ],
         skip,
         take: limit,
       }),

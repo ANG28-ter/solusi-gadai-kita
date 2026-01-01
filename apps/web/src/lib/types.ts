@@ -319,12 +319,16 @@ export interface DashboardStats {
     cash: {
         inToday: number;
         outToday: number;
+        inThisMonth: number;
+        outThisMonth: number;
         balance: number;
         changePercent: number;
     };
     payments: {
         totalToday: number;
         countToday: number;
+        totalThisMonth: number;
+        countThisMonth: number;
         averageAmount: number;
         interestCollected: number;
     };

@@ -68,22 +68,7 @@ export class PaymentsService {
         throw new BadRequestException('Loan sudah lunas');
       }
 
-      // 2) hitung kewajiban via calculator (single source for interest/status)
-      const summary = this.calculator.calculate({
-        principalRp: loan.principalRp,
-        startDate: loan.startDate,
-        today: paidAt,
-      });
-
-      // 3) sync status loan kalau perlu (ACTIVE <-> OVERDUE) sebelum keputusan LUNAS
-      if (summary.status !== loan.status) {
-        await tx.loan.update({
-          where: { id: loanId },
-          data: { status: summary.status },
-        });
-      }
-
-      // 4) agregasi pembayaran sebelumnya (yang sudah tercatat)
+      // 2) Get existing payments BEFORE calculation (to consider payment history)
       const agg = await tx.payment.aggregate({
         where: { loanId },
         _sum: {
@@ -95,6 +80,41 @@ export class PaymentsService {
       const interestPaidSoFar = agg._sum.interestRecordedRp ?? 0;
       const principalPaidSoFar = agg._sum.principalRecordedRp ?? 0;
       const totalPaidSoFar = interestPaidSoFar + principalPaidSoFar;
+
+      // 3.1) Check if interest was fully paid within the first 15 days
+      // If yes, we lock the rate at 5% (user rule: "if paid before 15 days, don't increase to 10%")
+      const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+      const aggEarly = await tx.payment.aggregate({
+        where: {
+          loanId,
+          reversedAt: null,
+          paidAt: { lt: day16Start }, // Paid strictly before day 16 (days 1-15)
+        },
+        _sum: { interestRecordedRp: true },
+      });
+      const interestPaidEarly = aggEarly._sum.interestRecordedRp ?? 0;
+
+      // Target 5% interest amount
+      const targetInterest5Percent = Math.floor(loan.principalRp * 0.05);
+      // Allow small margin of error or exact match? Exact match usually.
+      const isInterestPaidBeforeDay16 = interestPaidEarly >= targetInterest5Percent;
+
+      // 3.2) Calculate obligations considering payment history
+      const summary = this.calculator.calculate({
+        principalRp: loan.principalRp,
+        startDate: loan.startDate,
+        today: paidAt,
+        interestPaidSoFar,
+        isInterestPaidBeforeDay16, // Pass the flag
+      });
+
+      // 4) sync status loan kalau perlu (ACTIVE <-> OVERDUE) sebelum keputusan LUNAS
+      if (summary.status !== loan.status) {
+        await tx.loan.update({
+          where: { id: loanId },
+          data: { status: summary.status },
+        });
+      }
 
       // 5) remaining berdasarkan kewajiban saat ini
       const remainingTotal = Math.max(summary.totalDueRp - totalPaidSoFar, 0);

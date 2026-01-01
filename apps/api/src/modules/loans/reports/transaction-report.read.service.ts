@@ -77,7 +77,7 @@ export class TransactionReportReadService {
         loan: { select: { code: true } },
         cashLedger: { select: { id: true } },
       },
-      orderBy: { paidAt: 'asc' },
+      orderBy: { paidAt: 'desc' },
     });
 
     const paymentReport = paymentRows.map((p) => ({
@@ -133,7 +133,7 @@ export class TransactionReportReadService {
         },
         cashLedger: { select: { id: true } },
       },
-      orderBy: { settledAt: 'asc' },
+      orderBy: { settledAt: 'desc' },
     });
 
     const auctionReport = auctionRows.map((a) => ({
@@ -175,7 +175,7 @@ export class TransactionReportReadService {
         note: true,
         source: true,
       },
-      orderBy: { txnDate: 'asc' },
+      orderBy: { txnDate: 'desc' },
     });
 
     const manualIncomeReport = manualIncomeRows.map((e) => {
@@ -230,7 +230,7 @@ export class TransactionReportReadService {
           note: true,
           source: true,
         },
-        orderBy: { txnDate: 'asc' },
+        orderBy: { txnDate: 'desc' },
       });
 
       expenseReport = expenseRows.map((e) => {
@@ -257,7 +257,7 @@ export class TransactionReportReadService {
     merged.sort((a, b) => {
       const t1 = a.date.getTime();
       const t2 = b.date.getTime();
-      if (t1 !== t2) return t1 - t2;
+      if (t1 !== t2) return t2 - t1; // Descending (Newest first)
       return a.name.localeCompare(b.name);
     });
 

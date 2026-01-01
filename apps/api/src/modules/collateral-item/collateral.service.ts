@@ -212,6 +212,39 @@ export class CollateralService {
     return collateral;
   }
 
+  async update(id: string, input: CreateCollateralDto, branchId: string) {
+    // Check if exists and get current data
+    const collateral = await this.prisma.collateralItem.findUnique({
+      where: { id },
+      select: { id: true, branchId: true, loanId: true },
+    });
+
+    if (!collateral) {
+      throw new NotFoundException('Collateral not found');
+    }
+
+    // Branch validation
+    if (collateral.branchId !== branchId) {
+      throw new ForbiddenException('Collateral not found in your branch');
+    }
+
+    // Prevent editing if attached to a loan
+    if (collateral.loanId) {
+      throw new BadRequestException(
+        'Tidak dapat mengedit barang jaminan yang sedang digadaikan',
+      );
+    }
+
+    return this.prisma.collateralItem.update({
+      where: { id },
+      data: {
+        name: input.name,
+        description: input.description,
+        estimatedValueRp: input.estimatedValueRp,
+      },
+    });
+  }
+
   async delete(id: string) {
     // Check if exists
     const collateral = await this.findOne(id);

@@ -8,6 +8,8 @@ export class LoanCalculationService {
     principalRp: number;
     startDate: Date;
     today?: Date;
+    interestPaidSoFar?: number;  // Amount of interest already paid
+    isInterestPaidBeforeDay16?: boolean; // NEW: check if interest was cleared early
   }) {
     const today = input.today ?? new Date();
 
@@ -24,28 +26,43 @@ export class LoanCalculationService {
 
     let interestRatePercent: number;
     let status: LoanStatus;
+    const isEarlyPaid = input.isInterestPaidBeforeDay16 ?? false;
 
     if (daysUsed <= 15) {
       interestRatePercent = 5;
       status = LoanStatus.ACTIVE;
     } else if (daysUsed <= 30) {
-      interestRatePercent = 10;
+      // If paid off early (before day 16), keep rate at 5%
+      interestRatePercent = isEarlyPaid ? 5 : 10;
       status = LoanStatus.ACTIVE;
     } else {
-      interestRatePercent = 10; // frozen
+      // Even if overdue, if early payment was made, do we look at 5%?
+      // "untuk hari ke 16 dan seterusnya bunga menjadi 0"
+      // This implies the obligation is satisfied at 5%.
+      interestRatePercent = isEarlyPaid ? 5 : 10;
       status = LoanStatus.OVERDUE;
     }
 
-    const interestAmountRp = Math.floor(
+    // Calculate base interest based on days and rate
+    const baseInterestAmountRp = Math.floor(
       (input.principalRp * interestRatePercent) / 100,
     );
 
-    const totalDueRp = input.principalRp + interestAmountRp;
+    // Consider already paid interest
+    const interestPaidSoFar = input.interestPaidSoFar ?? 0;
+    const remainingInterest = Math.max(baseInterestAmountRp - interestPaidSoFar, 0);
+
+    // If interest is fully paid, effective rate is 0% for display purposes
+    // But we still return the total interest amount (what was paid)
+    const effectiveInterestRate = remainingInterest === 0 ? 0 : interestRatePercent;
+
+    const totalDueRp = input.principalRp + baseInterestAmountRp;
 
     return {
       daysUsed,
-      interestRatePercent,
-      interestAmountRp,
+      interestRatePercent: effectiveInterestRate,  // 0% if fully paid
+      interestAmountRp: baseInterestAmountRp,      // Total interest (base calculation)
+      remainingInterestRp: remainingInterest,      // Unpaid interest
       principalRp: input.principalRp,
       totalDueRp,
       status,

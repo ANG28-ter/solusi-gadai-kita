@@ -67,7 +67,7 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               Dashboard
@@ -76,8 +76,8 @@ export default function DashboardPage() {
               Selamat datang kembali! Berikut ringkasan hari ini.
             </p>
           </div>
-          <Link href="/loans/create">
-            <Button size="lg" leftIcon={<FiPlus />}>
+          <Link href="/loans/create" className="w-full sm:w-auto">
+            <Button size="lg" leftIcon={<FiPlus />} fullWidth className="sm:w-auto">
               Buat Gadai Baru
             </Button>
           </Link>
@@ -175,6 +175,24 @@ export default function DashboardPage() {
                     {formatCurrency(stats?.cash.outToday || 0)}
                   </span>
                 </div>
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Total Masuk Bulan Ini
+                    </span>
+                    <span className="text-xs font-semibold text-green-600">
+                      {formatCurrency(stats?.cash.inThisMonth || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Total Keluar Bulan Ini
+                    </span>
+                    <span className="text-xs font-semibold text-red-600">
+                      {formatCurrency(stats?.cash.outThisMonth || 0)}
+                    </span>
+                  </div>
+                </div>
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-600 dark:text-gray-400">
                     Saldo Kas
@@ -214,10 +232,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">
-                    Rata-rata
+                    Pembayaran Bulan Ini
                   </span>
                   <span className="font-semibold">
-                    {formatCurrency(stats?.payments.averageAmount || 0)}
+                    {formatCurrency(stats?.payments.totalThisMonth || 0)}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -278,47 +296,49 @@ export default function DashboardPage() {
           </Link>
 
           {/* 5. Data Nasabah */}
-          <Card hover className="p-6 h-full">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  Data Nasabah
-                </p>
-                <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  {stats?.customers.total || 0}
-                </h3>
+          <Link href="/customers">
+            <Card hover className="p-6 h-full">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    Data Nasabah
+                  </p>
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    {stats?.customers.total || 0}
+                  </h3>
+                </div>
+                <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center">
+                  <FiUsers className="w-6 h-6 text-white" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center">
-                <FiUsers className="w-6 h-6 text-white" />
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Total Nasabah
+                  </span>
+                  <span className="font-semibold text-indigo-600">
+                    {stats?.customers.total}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Nasabah Baru Bulan Ini
+                  </span>
+                  <span className="font-semibold text-green-600">
+                    +{stats?.customers.newThisMonth}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Status
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    Aktif
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Total Nasabah
-                </span>
-                <span className="font-semibold text-indigo-600">
-                  {stats?.customers.total}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Nasabah Baru Bulan Ini
-                </span>
-                <span className="font-semibold text-green-600">
-                  +{stats?.customers.newThisMonth}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Status
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  Aktif
-                </span>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </Link>
 
           {/* 6. Pengaturan User */}
           <Card hover className="p-6 h-full">
@@ -340,19 +360,19 @@ export default function DashboardPage() {
                 href="/users"
                 className="block p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition"
               >
-                User Management
+                Profil Pengguna
               </Link>
               <Link
                 href="/settings"
                 className="block p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition"
               >
-                Company Profile
+                Profil Kantor
               </Link>
               <Link
                 href="/settings"
                 className="block p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition"
               >
-                Branch Settings
+                Cabang
               </Link>
             </div>
           </Card>
