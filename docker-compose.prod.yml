@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: solusi-gadai-web
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001 # Ubah jika hosting di domain berbeda
+      # - NEXT_PUBLIC_API_URL=https://api.example.com
+    restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: solusi-gadai-api
+    depends_on:
+      - postgres
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://pegadaian:securepassword123@postgres:5432/pegadaian_prod?schema=public
+      - JWT_SECRET=supersecretkey # GANTI INI DI PRODUCTION!
+      - PORT=3001
+    restart: always
+
+  postgres:
+    image: postgres:16
+    container_name: solusi-gadai-postgres
+    environment:
+      POSTGRES_USER: pegadaian
+      POSTGRES_PASSWORD: securepassword123 # GANTI INI DI PRODUCTION!
+      POSTGRES_DB: pegadaian_prod
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pgdata_prod:
