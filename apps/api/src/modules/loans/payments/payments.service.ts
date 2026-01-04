@@ -12,6 +12,7 @@ import {
   CashType,
   CashSource,
 } from '@prisma/client';
+import { startOfDay } from 'date-fns';
 
 @Injectable()
 export class PaymentsService {
@@ -83,7 +84,8 @@ export class PaymentsService {
 
       // 3.1) Check if interest was fully paid within the first 15 days
       // If yes, we lock the rate at 5% (user rule: "if paid before 15 days, don't increase to 10%")
-      const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+      // Use startOfDay for consistent midnight-to-midnight comparison
+      const day16Start = startOfDay(new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000));
       const aggEarly = await tx.payment.aggregate({
         where: {
           loanId,

@@ -121,6 +121,11 @@ export interface Loan {
         id: string;
         status: AuctionStatus;
     };
+    LoanContract?: Array<{
+        id: string;
+        status: ContractStatus;
+        contractNo: string | null;
+    }>;
 }
 
 export interface CollateralItem {

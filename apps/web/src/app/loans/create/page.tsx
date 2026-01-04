@@ -13,7 +13,7 @@ import { formatCurrency } from '@/lib/utils';
 import { getAllInterestTiers } from '@/lib/loan-utils';
 import {
     FiArrowLeft, FiArrowRight, FiCheck, FiUser,
-    FiPackage, FiDollarSign, FiFileText, FiPercent, FiAlertTriangle
+    FiPackage, FiDollarSign, FiFileText, FiPercent, FiAlertTriangle, FiSearch
 } from 'react-icons/fi';
 import Link from 'next/link';
 
@@ -35,6 +35,7 @@ export default function CreateLoanPage() {
     // Form state
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
     const [selectedCollateralIds, setSelectedCollateralIds] = useState<string[]>([]);
+    const [customerSearch, setCustomerSearch] = useState('');
     const [principalRp, setPrincipalRp] = useState('');
     const [tenorMonths, setTenorMonths] = useState('');
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -143,6 +144,19 @@ export default function CreateLoanPage() {
     const principal = parseInt(principalRp.replace(/\D/g, '')) || 0;
     const ltvRatio = totalCollateralValue > 0 ? (principal / totalCollateralValue) * 100 : 0;
 
+    // Filter customers based on search
+    const filteredCustomers = customers.filter(customer => {
+        if (!customerSearch) return true;
+
+        const searchLower = customerSearch.toLowerCase();
+        return (
+            customer.fullName?.toLowerCase().includes(searchLower) ||
+            customer.phone?.toLowerCase().includes(searchLower) ||
+            customer.nik?.toLowerCase().includes(searchLower) ||
+            customer.code?.toLowerCase().includes(searchLower)
+        );
+    });
+
     return (
         <AppLayout>
             <div className="max-w-4xl mx-auto space-y-6">
@@ -211,37 +225,74 @@ export default function CreateLoanPage() {
                                 {loadingData ? (
                                     <p className="text-center py-8 text-gray-500">Memuat data nasabah...</p>
                                 ) : (
-                                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                                        {customers.map((customer) => (
-                                            <div
-                                                key={customer.id}
-                                                onClick={() => setSelectedCustomerId(customer.id)}
-                                                className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedCustomerId === customer.id
-                                                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                                                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                                                    }`}
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                            {customer.fullName}
-                                                        </h3>
-                                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                            {customer.phone} • {customer.address}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                                            NIK: {customer.nik || '-'}
-                                                        </p>
-                                                    </div>
-                                                    {selectedCustomerId === customer.id && (
-                                                        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                                            <FiCheck className="w-4 h-4 text-white" />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                    <>
+                                        {/* Search Input */}
+                                        <div className="mb-4">
+                                            <div className="relative">
+                                                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Cari nasabah (nama, telepon, NIK, kode)..."
+                                                    value={customerSearch}
+                                                    onChange={(e) => setCustomerSearch(e.target.value)}
+                                                    className="pl-10"
+                                                    fullWidth
+                                                />
                                             </div>
-                                        ))}
-                                    </div>
+                                            {customerSearch && (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                                    Ditemukan {filteredCustomers.length} dari {customers.length} nasabah
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {filteredCustomers.length === 0 && customerSearch ? (
+                                            <div className="text-center py-8">
+                                                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                                                    Tidak ada nasabah yang cocok dengan "{customerSearch}"
+                                                </p>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setCustomerSearch('')}
+                                                >
+                                                    Reset Pencarian
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                                {filteredCustomers.map((customer) => (
+                                                    <div
+                                                        key={customer.id}
+                                                        onClick={() => setSelectedCustomerId(customer.id)}
+                                                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedCustomerId === customer.id
+                                                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                                                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-start justify-between">
+                                                            <div>
+                                                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                                    {customer.fullName}
+                                                                </h3>
+                                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                                    {customer.phone} • {customer.address}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                                                    NIK: {customer.nik || '-'}
+                                                                </p>
+                                                            </div>
+                                                            {selectedCustomerId === customer.id && (
+                                                                <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                                                    <FiCheck className="w-4 h-4 text-white" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}

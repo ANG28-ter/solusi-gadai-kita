@@ -198,19 +198,20 @@ export default function LoanDetailPage() {
 
                     {/* Action Buttons - Responsive Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {/* Edit button - only if no payments and not finalized */}
-                        {!loan.finalizedAt && payments.length === 0 && (
-                            <Link href={`/loans/${loan.id}/edit`} className="w-full">
-                                <Button
-                                    variant="secondary"
-                                    leftIcon={<FiArrowLeft className="rotate-180" />}
-                                    fullWidth
-                                    className="min-h-[48px]"
-                                >
-                                    Edit Gadai
-                                </Button>
-                            </Link>
-                        )}
+                        {/* Edit button - allow if no payments and (not finalized OR contract voided) */}
+                        {payments.length === 0 &&
+                            (!loan.finalizedAt || loan.LoanContract?.[0]?.status === 'VOID') && (
+                                <Link href={`/loans/${loan.id}/edit`} className="w-full">
+                                    <Button
+                                        variant="secondary"
+                                        leftIcon={<FiArrowLeft className="rotate-180" />}
+                                        fullWidth
+                                        className="min-h-[48px]"
+                                    >
+                                        Edit Gadai
+                                    </Button>
+                                </Link>
+                            )}
 
                         {loan.status === 'ACTIVE' && (
                             <>
@@ -394,7 +395,7 @@ export default function LoanDetailPage() {
                                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
                                         : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
                                     }`}>
-                                    {getInterestTierInfo(remaining.daysUsed).ratePercent} / {getInterestTierInfo(remaining.daysUsed).description}
+                                    {remaining.interestRatePercent}% / Hari ke-{remaining.daysUsed}
                                 </div>
                             </div>
                         </CardHeader>

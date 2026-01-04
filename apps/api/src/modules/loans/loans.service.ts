@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LoanCalculationService } from './services/loans-calculation.service';
 import { LoanPolicyService } from './estimate/loan-policy.service';
 import { LoanStatus } from '@prisma/client';
+import { startOfDay } from 'date-fns';
 
 @Injectable()
 export class LoansService {
@@ -28,9 +29,24 @@ export class LoansService {
       return loan.status;
     }
 
+    // Check if interest was fully paid within the first 15 days
+    const day16Start = startOfDay(new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000));
+    const aggEarly = await this.prisma.payment.aggregate({
+      where: {
+        loanId: loan.id,
+        reversedAt: null,
+        paidAt: { lt: day16Start },
+      },
+      _sum: { interestRecordedRp: true },
+    });
+    const interestPaidEarly = aggEarly._sum.interestRecordedRp ?? 0;
+    const targetInterest5Percent = Math.floor(loan.principalRp * 0.05);
+    const isInterestPaidBeforeDay16 = interestPaidEarly >= targetInterest5Percent;
+
     const summary = this.calculator.calculate({
       principalRp: loan.principalRp,
       startDate: loan.startDate,
+      isInterestPaidBeforeDay16,
     });
 
     if (summary.status !== loan.status) {
@@ -142,7 +158,15 @@ export class LoansService {
   ) {
     const loan = await this.prisma.loan.findUnique({
       where: { id },
-      include: { payments: true, collaterals: true },
+      include: {
+        payments: true,
+        collaterals: true,
+        LoanContract: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { status: true },
+        },
+      },
     });
 
     if (!loan) {
@@ -154,8 +178,9 @@ export class LoansService {
       throw new BadRequestException('Loan yang sudah ada pembayaran tidak bisa diedit');
     }
 
-    // ✅ VALIDASI: Tidak bisa edit jika sudah finalized
-    if (loan.finalizedAt) {
+    // ✅ VALIDASI: Tidak bisa edit jika sudah finalized, KECUALI kontrak terakhir VOID
+    const latestContract = loan.LoanContract?.[0];
+    if (loan.finalizedAt && latestContract?.status !== 'VOID') {
       throw new BadRequestException('Loan yang sudah difinalize tidak bisa diedit');
     }
 
@@ -298,6 +323,15 @@ export class LoansService {
             fullName: true,
           },
         },
+        LoanContract: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            contractNo: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -346,7 +380,8 @@ export class LoansService {
     const interestPaidSoFar = agg._sum.interestRecordedRp ?? 0;
 
     // Check if interest was fully paid within the first 15 days
-    const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+    // Use startOfDay for consistent midnight-to-midnight comparison
+    const day16Start = startOfDay(new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000));
     const aggEarly = await this.prisma.payment.aggregate({
       where: {
         loanId: id,
@@ -395,7 +430,8 @@ export class LoansService {
     const totalPaid = interestPaid + principalPaid;
 
     // Check if interest was fully paid within the first 15 days
-    const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+    // Use startOfDay for consistent midnight-to-midnight comparison
+    const day16Start = startOfDay(new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000));
     const aggEarly = await this.prisma.payment.aggregate({
       where: {
         loanId: id,

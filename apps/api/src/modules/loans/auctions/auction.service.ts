@@ -8,6 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { LoanStatus, AuctionStatus } from '@prisma/client';
 import { CloseAuctionDto } from './dto/close-auction.dto';
 import { LoanCalculationService } from '../services/loans-calculation.service';
+import { startOfDay } from 'date-fns';
 
 @Injectable()
 export class AuctionService {
@@ -125,7 +126,8 @@ export class AuctionService {
       const totalPaid = interestPaid + principalPaid;
 
       // Check logic: isInterestPaidBeforeDay16 same as LoansService
-      const day16Start = new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+      // Use startOfDay for consistent midnight-to-midnight comparison
+      const day16Start = startOfDay(new Date(loan.startDate.getTime() + 15 * 24 * 60 * 60 * 1000));
       const aggEarly = await tx.payment.aggregate({
         where: {
           loanId: loanId,

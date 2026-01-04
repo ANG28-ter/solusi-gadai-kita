@@ -49,8 +49,9 @@ export default function EditLoanPage() {
                 throw new Error('Loan not found');
             }
 
-            // Check if can edit
-            if (loanData.finalizedAt) {
+            // Check if can edit - allow if not finalized OR if latest contract is VOID
+            const latestContract = loanData.LoanContract?.[0];
+            if (loanData.finalizedAt && latestContract?.status !== 'VOID') {
                 toast.error('Loan sudah difinalize, tidak bisa diedit');
                 router.push(`/loans/${params.id}`);
                 return;
