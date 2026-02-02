@@ -78,7 +78,7 @@ git push -u origin main
 2. Klik tab **"Settings"**
 3. Di bagian **"Build"**, set:
    - **Root Directory**: `apps/api`
-   - **Build Command**: `npm install && npx prisma generate --schema=./prisma/schema.prisma && npm run build`
+   - **Build Command**: `npm install && npx prisma generate --schema=prisma/schema.prisma && npm run build`
    - **Start Command**: `npm run start:prod`
 
 4. Klik tab **"Variables"**
@@ -107,7 +107,7 @@ Setelah deployment berhasil, kita perlu menjalankan migration:
 4. Jalankan command berikut di Railway CLI atau gunakan "One-off Command":
 
 ```bash
-npx prisma migrate deploy --schema=./prisma/schema.prisma
+npx prisma migrate deploy --schema=prisma/schema.prisma
 ```
 
 5. Setelah migration selesai, jalankan seeding untuk data awal:
@@ -252,7 +252,19 @@ Password: admin123
 1. Pastikan `DATABASE_URL` sudah di-set
 2. Jalankan migration manual via Railway CLI:
    ```bash
-   railway run npx prisma migrate deploy --schema=./apps/api/prisma/schema.prisma
+   railway run npx prisma migrate deploy
+   ```
+
+### Error: Prisma schema not found
+
+Jika muncul error `Could not find Prisma Schema`:
+
+1. **Di Railway/Vercel**: Pastikan Root Directory sudah di-set ke `apps/api`
+2. Gunakan path relatif `prisma/schema.prisma` (bukan `./prisma/schema.prisma`)
+3. Gunakan command dengan flag schema:
+   ```bash
+   npx prisma generate --schema=prisma/schema.prisma
+   npx prisma migrate deploy --schema=prisma/schema.prisma
    ```
 
 ---
