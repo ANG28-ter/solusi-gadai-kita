@@ -78,8 +78,11 @@ git push -u origin main
 2. Klik tab **"Settings"**
 3. Di bagian **"Build"**, set:
    - **Root Directory**: `apps/api`
-   - **Build Command**: `npm install && npx prisma generate --schema=prisma/schema.prisma && npm run build`
-   - **Start Command**: `npm run start:prod`
+   - **Build Command**: (kosongkan, biarkan Railway auto-detect)
+   - **Start Command**: (kosongkan, biarkan Railway auto-detect)
+
+> [!TIP]
+> Railway akan otomatis menggunakan konfigurasi dari file `nixpacks.toml` yang ada di `apps/api/`.
 
 4. Klik tab **"Variables"**
 5. Tambahkan environment variables berikut:
@@ -96,6 +99,9 @@ NODE_ENV=production
 > Ganti `JWT_SECRET` dengan string random yang kuat (minimal 32 karakter).
 
 6. Klik **"Deploy"**
+
+> [!NOTE]
+> File `nixpacks.toml` di `apps/api/` akan otomatis digunakan oleh Railway untuk build configuration. File ini sudah dikonfigurasi untuk menjalankan Prisma generate tanpa perlu flag `--schema` karena Prisma akan otomatis mencari di `./prisma/schema.prisma`.
 
 ### 2.4 Jalankan Database Migration
 
