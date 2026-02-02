@@ -80,6 +80,7 @@ git push -u origin main
    - **Root Directory**: `apps/api`
    - **Build Command**: (kosongkan, biarkan Railway auto-detect)
    - **Start Command**: (kosongkan, biarkan Railway auto-detect)
+   - **Watch Paths**: `/apps/api/**` (agar hanya trigger deploy saat ada perubahan di apps/api)
 
 > [!TIP]
 > Railway akan otomatis menggunakan konfigurasi dari file `nixpacks.toml` yang ada di `apps/api/`.
