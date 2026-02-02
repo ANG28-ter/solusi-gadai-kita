@@ -79,7 +79,7 @@ export class AuctionService {
 
       if (loan.status !== LoanStatus.OVERDUE) {
         throw new BadRequestException(
-          'Auction hanya boleh untuk loan status OVERDUE',
+          'Auction hanya boleh untuk loan status Jatuh tempo',
         );
       }
 
