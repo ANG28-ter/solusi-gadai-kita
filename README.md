@@ -167,7 +167,7 @@ Developed by [Your Name] as a portfolio project demonstrating full-stack develop
 
 ## 📧 Contact
 
-For inquiries about this project, please contact: [your-email@example.com]
+For inquiries about this project, please contact: [akaverlangga28@gmail.com]
 
 ---
 
