@@ -44,7 +44,7 @@ Sistem ERP Pegadaian modern yang dibangun dengan teknologi full-stack TypeScript
 
 1. Clone repository:
 ```bash
-git clone https://github.com/yourusername/solusi-gadai-kita.git
+git clone https://github.com/ANG28-ter/solusi-gadai-kita.git
 cd solusi-gadai-kita
 ```
 
@@ -91,17 +91,6 @@ npm run dev
 Username: admin
 Password: admin123
 ```
-
-## 🌐 Deployment
-
-### Demo/Portfolio (Gratis)
-Lihat panduan lengkap di [DEPLOYMENT_DEMO.md](./DEPLOYMENT_DEMO.md) untuk deploy ke:
-- **Database**: Neon (PostgreSQL gratis)
-- **Backend**: Railway (gratis 500 jam/bulan)
-- **Frontend**: Vercel (gratis)
-
-### Production (VPS)
-Lihat panduan lengkap di [DEPLOYMENT.md](./DEPLOYMENT.md) untuk deploy menggunakan Docker di VPS.
 
 ## 📁 Struktur Project
 
@@ -163,7 +152,7 @@ This project is private and proprietary.
 
 ## 👨‍💻 Author
 
-Developed by [Your Name] as a portfolio project demonstrating full-stack development capabilities.
+Developed by Aka as a portfolio project demonstrating full-stack development capabilities.
 
 ## 📧 Contact
 
