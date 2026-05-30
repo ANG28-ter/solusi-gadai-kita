@@ -1,6 +1,6 @@
 # Solusi Gadai Kita
 
-Sistem ERP Pegadaian modern yang dibangun dengan teknologi full-stack TypeScript. Aplikasi ini dirancang untuk mengelola operasional pegadaian, termasuk manajemen nasabah, gadai, lelang, kas, dan pelaporan.
+Pawnshop modern ERP system is built with full-stack TypeScript technology. This application is designed to manage pawnshop operations, including customer management, pawnshops, auctions, cash, and reporting.
 
 ## 🚀 Tech Stack
 
@@ -20,18 +20,18 @@ Sistem ERP Pegadaian modern yang dibangun dengan teknologi full-stack TypeScript
 - **Monorepo** - Workspace-based project structure
 - **Docker** - Containerization (optional)
 
-## 📋 Fitur Utama
+## 📋 Features
 
-- ✅ **Manajemen Nasabah** - CRUD nasabah dengan foto KTP
-- ✅ **Manajemen Gadai** - Buat, edit, dan kelola pinjaman gadai
-- ✅ **Kontrak Digital** - Generate dan kelola kontrak gadai
-- ✅ **Pembayaran** - Catat pembayaran dan hitung bunga otomatis
-- ✅ **Lelang** - Kelola barang jaminan yang akan dilelang
-- ✅ **Kas & Ledger** - Pencatatan kas masuk/keluar dengan kategori
-- ✅ **Pelaporan** - Laporan transaksi dan review manager
-- ✅ **Multi-Branch** - Support untuk cabang berbeda
-- ✅ **Role-Based Access** - Admin, Kasir, Manajer
-- ✅ **Notifikasi** - Real-time notifications
+✅ **Customer Management** - Customer CRUD with ID card photo
+✅ **Pawn Management** - Create, edit, and manage pawn loans
+✅ **Digital Contracts** - Generate and manage pawn contracts
+✅ **Payments** - Record payments and calculate interest automatically
+✅ **Auctions** - Manage collateral to be auctioned
+✅ **Cash & Ledger** - Record cash inflows/outflows by category
+✅ **Reporting** - Transaction reports and manager reviews
+✅ **Multi-Branch** - Support for different branches
+✅ **Role-Based Access** - Admin, Cashier, Manager
+✅ **Notifications** - Real-time notifications
 
 ## 🛠️ Development Setup
 
@@ -135,7 +135,7 @@ npm run test:cov
 
 ## 📝 API Documentation
 
-API menggunakan RESTful endpoints dengan prefix `/api/v1`. Contoh endpoints:
+API use RESTful endpoints dengan prefix `/api/v1`. example endpoints:
 
 - `POST /api/v1/auth/login` - Login
 - `GET /api/v1/customers` - List customers
