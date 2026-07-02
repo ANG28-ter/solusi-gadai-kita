@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
-import { PrismaService } from "../../prisma/prisma.service"; // ✅ PENTING
+import { PrismaService } from "../../prisma/prisma.service"; // PENTING
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwt: JwtService,
-    private readonly prisma: PrismaService // ✅ BENAR
+    private readonly prisma: PrismaService
   ) { }
 
   async login(username: string, password: string) {
@@ -51,7 +51,7 @@ export class AuthService {
         role: user.role.name,
         branchId: user.branchId,
         fullName: user.fullName,
-        branch: user.branch // ✅ Pass branch data to frontend
+        branch: user.branch //Pass branch data to frontend
       }
     };
   }

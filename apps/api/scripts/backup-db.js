@@ -8,7 +8,7 @@ require('dotenv').config();
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-    console.error('❌ DATABASE_URL tidak ditemukan di .env');
+    console.error('DATABASE_URL tidak ditemukan di .env');
     process.exit(1);
 }
 
